@@ -18,6 +18,11 @@ class DelayQueue<T> {
             if (this.timestamp < second.timestamp) {
                 return -1;
             } else if (this.timestamp == second.timestamp) {
+                if (this.elem.hashCode() < second.elem.hashCode()) {
+                    return -1;
+                } else if (this.elem.hashCode() > second.elem.hashCode()) {
+                    return 1;
+                }
                 return 0;
             } else {
                 return 1;
@@ -44,18 +49,20 @@ class DelayQueue<T> {
 
     public T remove() {
         synchronized (monitor) {
-            if (events.isEmpty()) {
-                try {
-                    monitor.wait();
-                } catch (Exception e) {
-                }
-            }
-            Event<T> earliest = events.first();
-            long diff = earliest.timestamp - System.currentTimeMillis();
-            if (diff > 0) {
-                try {
-                    Thread.sleep(diff);
-                } catch (Exception e) {
+            while (events.isEmpty() || events.first().timestamp > System.currentTimeMillis()) {
+                if (events.isEmpty()) {
+                    try {
+                        monitor.wait();
+                    } catch (Exception e) {
+                    }
+                } else if (events.first().timestamp > System.currentTimeMillis()) {
+                    long diff = events.first().timestamp - System.currentTimeMillis();
+                    try {
+                        if (diff > 0) {
+                            monitor.wait(diff);
+                        }
+                    } catch (Exception e) {
+                    }
                 }
             }
             return events.pollFirst().elem;
