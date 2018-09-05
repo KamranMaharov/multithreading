@@ -30,8 +30,8 @@ class DelayQueue<T> {
         }
     }
 
-    private Object monitor;
-    TreeSet<Event<T>> events;
+    private final Object monitor;
+    private final TreeSet<Event<T>> events;
 
     public DelayQueue() {
         System.out.println("DelayQueue constructor");
@@ -39,7 +39,7 @@ class DelayQueue<T> {
         this.events = new TreeSet<>();
     }
 
-    public boolean offer(T elem, long milliSeconds) {
+    public final boolean offer(T elem, long milliSeconds) {
         synchronized (monitor) {
             events.add(new Event<T>(elem, System.currentTimeMillis() + milliSeconds));
             monitor.notifyAll();
@@ -47,22 +47,19 @@ class DelayQueue<T> {
         return true;
     }
 
-    public T remove() {
+    public final T remove() {
         synchronized (monitor) {
             while (events.isEmpty() || events.first().timestamp > System.currentTimeMillis()) {
-                if (events.isEmpty()) {
-                    try {
+                try {
+                    if (events.isEmpty()) {
                         monitor.wait();
-                    } catch (Exception e) {
-                    }
-                } else if (events.first().timestamp > System.currentTimeMillis()) {
-                    long diff = events.first().timestamp - System.currentTimeMillis();
-                    try {
+                    } else if (events.first().timestamp > System.currentTimeMillis()) {
+                        long diff = events.first().timestamp - System.currentTimeMillis();
                         if (diff > 0) {
                             monitor.wait(diff);
                         }
-                    } catch (Exception e) {
                     }
+                } catch (Exception e) {
                 }
             }
             return events.pollFirst().elem;
